@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace _4ChordsTool
 {
-    public class Utils
+    public static class Utils
     {
         public static void StartCmdLine(string process, string param, bool wait)
         {
@@ -66,25 +70,43 @@ namespace _4ChordsTool
             }
         }
 
+        public static string GetDisplayName(this Enum enumValue)
+        {
+            var attr = enumValue.GetType().GetMember(enumValue.ToString())
+                   .First()
+                   .GetCustomAttribute<DisplayAttribute>();
+
+            if (attr != null)
+                return attr.Name;
+            else
+                return enumValue.ToString();
+
+        }
+
+        public static int getRandomId()
+        {
+            var random = new Random();
+            return random.Next(1000000, 9999999);
+        }
 
         //Not used yet (
-        //public static string ComputeMD4(string input)
-        //{
-        //    byte[] unicodeBytes = Encoding.ASCII.GetBytes(input);
+        public static string ComputeMD4(string input)
+        {
+            byte[] unicodeBytes = Encoding.ASCII.GetBytes(input);
 
-        //    using (HashAlgorithm hash = new MD4())
-        //    {
-        //        var res = hash.ComputeHash(unicodeBytes);
+            using (HashAlgorithm hash = new MD4())
+            {
+                var res = hash.ComputeHash(unicodeBytes);
 
-        //        StringBuilder sb = new StringBuilder();
+                StringBuilder sb = new StringBuilder();
 
-        //        for (int i = 0; i < res.Length; i++)
-        //        {
-        //            sb.Append(res[i].ToString("x2"));
-        //        }
+                for (int i = 0; i < res.Length; i++)
+                {
+                    sb.Append(res[i].ToString("x2"));
+                }
 
-        //        return sb.ToString();
-        //    }
-        //}
+                return sb.ToString();
+            }
+        }
     }
 }

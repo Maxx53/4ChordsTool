@@ -1,0 +1,2478 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>MidiSharp</name>
+    </assembly>
+    <members>
+        <member name="T:MidiSharp.CodeGeneration.CSharpCodeGenerator">
+            <summary>Generator to render C# code to generate a given MIDI file.</summary>
+        </member>
+        <member name="M:MidiSharp.CodeGeneration.CSharpCodeGenerator.Write(MidiSharp.MidiSequence,System.String,System.String,System.IO.TextWriter)">
+            <summary>Creates code from a MIDI sequence.</summary>
+            <param name="sequence">The sequence for which code should be generated.</param>
+            <param name="namespaceName">The namspace of the type to be generated.</param>
+            <param name="typeName">The name of the type to be generated.</param>
+            <param name="writer">The writer to which the text is written.</param>
+        </member>
+        <member name="T:MidiSharp.CodeGeneration.CSharpCodeGenerator.Generator">
+            <summary>
+            Provides the actual generation logic.  This is separated out to make it easier to share state amongst method
+            calls via instance fields.
+            </summary>
+        </member>
+        <member name="F:MidiSharp.CodeGeneration.CSharpCodeGenerator.Generator.m_writer">
+            <summary>The writer to which all output should be written.</summary>
+        </member>
+        <member name="F:MidiSharp.CodeGeneration.CSharpCodeGenerator.Generator.m_indentationLevel">
+            <summary>The current indentation level.</summary>
+        </member>
+        <member name="F:MidiSharp.CodeGeneration.CSharpCodeGenerator.Generator.EventsListName">
+            <summary>The name of the events list to which events should be added.</summary>
+        </member>
+        <member name="M:MidiSharp.CodeGeneration.CSharpCodeGenerator.Generator.Generate(MidiSharp.MidiSequence,System.String,System.String)">
+            <summary>Generates a C# code file that when compiled and executed will create the specified MidiSequence.</summary>
+            <param name="sequence">The sequence to be codified.</param>
+            <param name="namespaceName">The namespace to be used in the generated code.</param>
+            <param name="typeName">The type name to be used in the generated code.</param>
+        </member>
+        <member name="M:MidiSharp.CodeGeneration.CSharpCodeGenerator.Generator.GenerateAddEvent(MidiSharp.Events.MidiEvent)">
+            <summary>Generates a line of code to add the specified event to the "events" list.</summary>
+            <param name="ev">The event to be added.</param>
+        </member>
+        <member name="M:MidiSharp.CodeGeneration.CSharpCodeGenerator.Generator.Ln(System.Object[])">
+            <summary>Writes to the writer a line with each of the values, prefixed with the current indentation.</summary>
+            <param name="values">The values to write.</param>
+        </member>
+        <member name="M:MidiSharp.CodeGeneration.CSharpCodeGenerator.Generator.Braces">
+            <summary>
+            Outputs a line with a brace and increases the indentation level.
+            When the returned IDisposable is disposed, a line with a closing brace will be output and the indentation level decreased.
+            </summary>
+            <returns>An IDisposable that will output a closing brace and decrease the indentation level.</returns>
+        </member>
+        <member name="T:MidiSharp.CodeGeneration.CSharpCodeGenerator.Generator.EndBrace">
+            <summary>An IDisposable that, when disposed, will decrease the indentation level and output a closing brace.</summary>
+        </member>
+        <member name="M:MidiSharp.CodeGeneration.CSharpCodeGenerator.Generator.Case``1(MidiSharp.Events.MidiEvent,System.Func{``0,System.String})">
+            <summary>
+            Checks whether the specified MidiEvent is of the specified type.
+            If it is the func is evaluated and its resulting string is returned.
+            Otherwise, returns null.
+            </summary>
+            <typeparam name="T">Specifies the type of the event desired.</typeparam>
+            <param name="ev">The event to process.</param>
+            <param name="func">The function to execute with the event if the event is of the specified type.</param>
+            <returns>The result of running the function over the event if the event is of the right type; otherwise, null.</returns>
+        </member>
+        <member name="M:MidiSharp.CodeGeneration.CSharpCodeGenerator.Generator.ByteArrayCreationString(System.Byte[])">
+            <summary>Create a string of C# code for creating a byte array containing the specified data.</summary>
+            <param name="data">The array of data.</param>
+            <returns>A string of C# code for allocating a byte array containing the specified data.</returns>
+        </member>
+        <member name="M:MidiSharp.CodeGeneration.CSharpCodeGenerator.Generator.TextString(System.String)">
+            <summary>
+            Create a C# string from text, escaping some characters as unicode to make sure it renders reasonably in the C# code while
+            still resulting in the same output string.
+            </summary>
+            <param name="text">The text to output.</param>
+            <returns>The text put into a string.</returns>
+        </member>
+        <member name="M:MidiSharp.CodeGeneration.CSharpCodeGenerator.Generator.IsValidInTextString(System.Char)">
+            <summary>
+            Gets whether a character is ok to render in a C# quoted string.
+            Letters and digits are ok.  A space is fine, but whitespace like new lines could
+            cause problems for a string, since it's not rendered as a verbatim string.
+            Punctuation is generally ok, but certainly punctuation has special meaning inside
+            a C# string and is not ok.
+            </summary>
+            <param name="c">The character to examine.</param>
+            <returns>true if the character is valid; otherwise, false.</returns>
+        </member>
+        <member name="M:MidiSharp.CodeGeneration.CSharpCodeGenerator.Generator.Commas(System.Object[])">
+            <summary>Creates a string of the specified parts comma-separated.</summary>
+            <param name="values">The parts to process.</param>
+            <returns>The comma-delimited string of values.</returns>
+        </member>
+        <member name="T:MidiSharp.Controller">
+            <summary>List of defined controllers.  All descriptions come from MidiRef4.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.BankSelectCourse">
+            <summary>Switches between groups of sounds when more than 128 programs are in use.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.ModulationWheelCourse">
+            <summary>Sets the modulation wheel to a particular value.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.BreathControllerCourse">
+            <summary>Often used to control aftertouch.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.FootPedalCourse">
+            <summary>Often used to control aftertouch.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.PortamentoTimeCourse">
+            <summary>The rate at which portamento slides the pitch between two notes.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.DataEntryCourse">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.VolumeCourse">
+            <summary>Volume level for a given channel.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.BalanceCourse">
+            <summary>Controls stereo-balance.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.PanPositionCourse">
+            <summary>Where the stereo sound should be placed within the sound field.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.ExpressionCourse">
+            <summary>Percentage of volume.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.EffectControl1Course">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.EffectControl2Course">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.GeneralPurposeSlider1">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.GeneralPurposeSlider2">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.GeneralPurposeSlider3">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.GeneralPurposeSlider4">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.BankSelectFine">
+            <summary>Switches between groups of sounds when more than 128 programs are in use.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.ModulationWheelFine">
+            <summary>Sets the modulation wheel to a particular value.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.BreathControllerFine">
+            <summary>Often used to control aftertouch.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.FootPedalFine">
+            <summary>Often used to control aftertouch.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.PortamentoTimeFine">
+            <summary>The rate at which portamento slides the pitch between two notes.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.DataEntryFine">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.VolumeFine">
+            <summary>Volume level for a given channel.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.BalanceFine">
+            <summary>Controls stereo-balance.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.PanPositionFine">
+            <summary>Where the stereo sound should be placed within the sound field.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.ExpressionFine">
+            <summary>Percentage of volume.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.EffectControl1Fine">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.EffectControl2Fine">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.HoldPedalOnOff">
+            <summary>Lengthens release time of playing notes.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.PortamentoOnOff">
+            <summary>The rate at which portamento slides the pitch between two notes.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.SustenutoPedalOnOff">
+            <summary>Sustains notes that are already on.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.SoftPedalOnOff">
+            <summary>Softens volume of any notes played.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.LegatoPedalOnOff">
+            <summary>Legato effect between notes.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.Hold2PedalOnOff">
+            <summary>Lengthens release time of playing notes.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.SoundVariation">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.SoundTimbre">
+            <summary>Controls envelope levels.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.SoundReleaseTime">
+            <summary>Controls envelope release times.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.SoundAttackTime">
+            <summary>Controls envelope attack time.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.SoundBrightness">
+            <summary>Controls filter's cutoff frequency.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.SoundControl6">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.SoundControl7">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.SoundControl8">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.SoundControl9">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.SoundControl10">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.GeneralPurposeButton1OnOff">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.GeneralPurposeButton2OnOff">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.GeneralPurposeButton3OnOff">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.GeneralPurposeButton4OnOff">
+            <summary>Various.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.EffectsLevel">
+            <summary>Controls level of effects.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.TremuloLevel">
+            <summary>Controls level of tremulo.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.ChorusLevel">
+            <summary>Controls level of chorus.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.CelesteLevel">
+            <summary>Detune amount for device.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.PhaserLevel">
+            <summary>Level of phaser effect.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.DataButtonIncrement">
+            <summary>Causes data button's value to increment.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.DataButtonDecrement">
+            <summary>Causes data button's value to decrement.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.NonRegisteredParameterFine">
+            <summary>Controls which parameter the button and data entry controls affect.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.NonRegisteredParameterCourse">
+            <summary>Controls which parameter the button and data entry controls affect.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.RegisteredParameterFine">
+            <summary>Controls which parameter the button and data entry controls affect.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.RegisteredParameterCourse">
+            <summary>Controls which parameter the button and data entry controls affect.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.AllSoundOff">
+            <summary>Mutes all sounding notes.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.AllControllersOff">
+            <summary>Resets controllers to default states.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.LocalKeyboardOnOff">
+            <summary>Turns on or off local keyboard.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.AllNotesOff">
+            <summary>Mutes all sounding notes.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.OmniModeOff">
+            <summary>Turns Omni off.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.OmniModeOn">
+            <summary>Turns Omni on.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.MonoOperation">
+            <summary>Enables Monophonic operation.</summary>
+        </member>
+        <member name="F:MidiSharp.Controller.PolyOperation">
+            <summary>Enables Polyphonic operation.</summary>
+        </member>
+        <member name="T:MidiSharp.DivisionType">
+            <summary>The division type for a MIDI sequence.</summary>
+        </member>
+        <member name="F:MidiSharp.DivisionType.TicksPerBeat">
+            <summary>A division measured in the number of ticks per beat (e.g. quarter note).</summary>
+        </member>
+        <member name="F:MidiSharp.DivisionType.FramesPerSecond">
+            <summary>A division measured in the number of frames per second.</summary>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.ChannelPrefixMetaMidiEvent">
+            <summary>A channel prefix meta event message.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.ChannelPrefixMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.ChannelPrefixMetaMidiEvent.m_prefix">
+            <summary>The prefix for the event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.ChannelPrefixMetaMidiEvent.#ctor(System.Int64,System.Byte)">
+            <summary>Intializes the channel prefix event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="prefix">The prefix for the event.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.ChannelPrefixMetaMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.ChannelPrefixMetaMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.ChannelPrefixMetaMidiEvent.Prefix">
+            <summary>Gets or sets the prefix for the event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.ChannelPrefixMetaMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.EndOfTrackMetaMidiEvent">
+            <summary>An end of track meta event message.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.EndOfTrackMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.EndOfTrackMetaMidiEvent.#ctor(System.Int64)">
+            <summary>Intializes the end of track meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.EndOfTrackMetaMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.EndOfTrackMetaMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.KeySignatureMetaMidiEvent">
+            <summary>A key signature meta event message.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.KeySignatureMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.KeySignatureMetaMidiEvent.m_key">
+            <summary>Number of sharps or flats in the signature.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.KeySignatureMetaMidiEvent.m_tonality">
+            <summary>Tonality of the signature.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.KeySignatureMetaMidiEvent.#ctor(System.Int64,MidiSharp.Key,MidiSharp.Tonality)">
+            <summary>Intializes the meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="key">Key of the signature.</param>
+            <param name="tonality">Tonality of the signature.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.KeySignatureMetaMidiEvent.#ctor(System.Int64,System.Byte,System.Byte)">
+            <summary>Intializes the key signature meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="key">Key of the signature.</param>
+            <param name="tonality">Tonality of the signature.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.KeySignatureMetaMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.KeySignatureMetaMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.KeySignatureMetaMidiEvent.Key">
+            <summary>Gets or sets the numerator for the event.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.KeySignatureMetaMidiEvent.Tonality">
+            <summary>Gets or sets the denominator for the event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.KeySignatureMetaMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.MetaMidiEvent">
+            <summary>Represents a meta event message.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.MetaMidiEvent.m_metaEventID">
+            <summary>The ID of the meta event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.MetaMidiEvent.#ctor(System.Int64,System.Byte)">
+            <summary>Intializes the meta MIDI event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="metaEventID">The ID of the meta event.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.MetaMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.MetaMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.MetaMidiEvent.MetaEventID">
+            <summary>Gets the ID of this meta event.</summary>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.MidiPortMetaMidiEvent">
+            <summary>A MIDI port meta event message.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.MidiPortMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.MidiPortMetaMidiEvent.m_port">
+            <summary>The port for the event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.MidiPortMetaMidiEvent.#ctor(System.Int64,System.Byte)">
+            <summary>Intializes the MIDI port event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="port">The port for the event.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.MidiPortMetaMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.MidiPortMetaMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.MidiPortMetaMidiEvent.Port">
+            <summary>Gets or sets the port for the event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.MidiPortMetaMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.ProprietaryMetaMidiEvent">
+            <summary>A proprietary meta event message.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.ProprietaryMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.ProprietaryMetaMidiEvent.m_data">
+            <summary>The data of the event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.ProprietaryMetaMidiEvent.#ctor(System.Int64,System.Byte[])">
+            <summary>Intializes the proprietary meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="data">The data associated with the event.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.ProprietaryMetaMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.ProprietaryMetaMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.ProprietaryMetaMidiEvent.Data">
+            <summary>Gets or sets the data for the event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.ProprietaryMetaMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.SequenceNumberMetaMidiEvent">
+            <summary>A sequence number meta event message.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.SequenceNumberMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.SequenceNumberMetaMidiEvent.m_number">
+            <summary>The sequence number for the event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.SequenceNumberMetaMidiEvent.#ctor(System.Int64,System.Int32)">
+            <summary>Intializes the sequence number meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="number">The sequence number for the event.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.SequenceNumberMetaMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.SequenceNumberMetaMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.SequenceNumberMetaMidiEvent.Number">
+            <summary>Gets or sets the sequence number for the event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.SequenceNumberMetaMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.SMPTEOffsetMetaMidiEvent">
+            <summary>An SMPTE offset meta event message.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.SMPTEOffsetMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.SMPTEOffsetMetaMidiEvent.#ctor(System.Int64,System.Byte,System.Byte,System.Byte,System.Byte,System.Byte)">
+            <summary>Intializes the SMTPE offset meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="hours">Hours for the event.</param>
+            <param name="minutes">Minutes for the event.</param>
+            <param name="seconds">Seconds for the event.</param>
+            <param name="frames">Frames for the event.</param>
+            <param name="fractionalFrames">Fractional frames for the event.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.SMPTEOffsetMetaMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.SMPTEOffsetMetaMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.SMPTEOffsetMetaMidiEvent.Hours">
+            <summary>Gets or sets the hours for the event.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.SMPTEOffsetMetaMidiEvent.Minutes">
+            <summary>Gets or sets the minutes for the event.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.SMPTEOffsetMetaMidiEvent.Seconds">
+            <summary>Gets or sets the seconds for the event.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.SMPTEOffsetMetaMidiEvent.Frames">
+            <summary>Gets or sets the frames for the event.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.SMPTEOffsetMetaMidiEvent.FractionalFrames">
+            <summary>Gets or sets the fractional frames for the event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.SMPTEOffsetMetaMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.TempoMetaMidiEvent">
+            <summary>A tempo meta event message.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.TempoMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.TempoMetaMidiEvent.m_tempo">
+            <summary>The tempo for the event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.TempoMetaMidiEvent.#ctor(System.Int64,System.Int32)">
+            <summary>Intializes the tempo meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="value">The tempo for the event.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.TempoMetaMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.TempoMetaMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.TempoMetaMidiEvent.Value">
+            <summary>Gets or sets the tempo for the event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.TempoMetaMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.Text.BaseTextMetaMidiEvent">
+            <summary>Represents a text meta event message.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.Text.BaseTextMetaMidiEvent.m_text">
+            <summary>The text associated with the event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.Text.BaseTextMetaMidiEvent.#ctor(System.Int64,System.Byte,System.String)">
+            <summary>Intializes the meta MIDI event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="metaEventID">The ID of the meta event.</param>
+            <param name="text">The text associated with the event.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.Text.BaseTextMetaMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.Text.BaseTextMetaMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.Text.BaseTextMetaMidiEvent.Text">
+            <summary>Gets or sets the text associated with this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.Text.BaseTextMetaMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.Text.CopyrightTextMetaMidiEvent">
+            <summary>A copyright meta event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.Text.CopyrightTextMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.Text.CopyrightTextMetaMidiEvent.#ctor(System.Int64,System.String)">
+            <summary>Initialize the copyright meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="text">The text associated with the event.</param>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.Text.CuePointTextMetaMidiEvent">
+            <summary>A cue point name meta event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.Text.CuePointTextMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.Text.CuePointTextMetaMidiEvent.#ctor(System.Int64,System.String)">
+            <summary>Initialize the cue point meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="text">The text associated with the event.</param>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.Text.DeviceNameTextMidiEvent">
+            <summary>A device name meta event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.Text.DeviceNameTextMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.Text.DeviceNameTextMidiEvent.#ctor(System.Int64,System.String)">
+            <summary>Initialize the device name meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="text">The text associated with the event.</param>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.Text.InstrumentTextMetaMidiEvent">
+            <summary>A instrument name meta event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.Text.InstrumentTextMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.Text.InstrumentTextMetaMidiEvent.#ctor(System.Int64,System.String)">
+            <summary>Initialize the instrument meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="text">The text associated with the event.</param>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.Text.LyricTextMetaMidiEvent">
+            <summary>A lyric name meta event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.Text.LyricTextMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.Text.LyricTextMetaMidiEvent.#ctor(System.Int64,System.String)">
+            <summary>Initialize the lyric meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="text">The text associated with the event.</param>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.Text.MarkerTextMetaMidiEvent">
+            <summary>A marker name meta event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.Text.MarkerTextMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.Text.MarkerTextMetaMidiEvent.#ctor(System.Int64,System.String)">
+            <summary>Initialize the marker meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="text">The text associated with the event.</param>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.Text.ProgramNameTextMetaMidiEvent">
+            <summary>A program name meta event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.Text.ProgramNameTextMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.Text.ProgramNameTextMetaMidiEvent.#ctor(System.Int64,System.String)">
+            <summary>Initialize the program name meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="text">The text associated with the event.</param>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.Text.SequenceTrackNameTextMetaMidiEvent">
+            <summary>A sequence/track name meta event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.Text.SequenceTrackNameTextMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.Text.SequenceTrackNameTextMetaMidiEvent.#ctor(System.Int64,System.String)">
+            <summary>Initialize the sequence/track name meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="text">The text associated with the event.</param>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.Text.TextMetaMidiEvent">
+            <summary>A text meta event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.Text.TextMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.Text.TextMetaMidiEvent.#ctor(System.Int64,System.String)">
+            <summary>Initialize the text meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="text">The text associated with the event.</param>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.TimeSignatureMetaMidiEvent">
+            <summary>A time signature meta event message.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Meta.TimeSignatureMetaMidiEvent.MetaId">
+            <summary>The meta id for this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.TimeSignatureMetaMidiEvent.#ctor(System.Int64,System.Byte,System.Byte,System.Byte,System.Byte)">
+            <summary>Intializes the time signature meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="numerator">Numerator of the time signature.</param>
+            <param name="denominator">Negative power of two, denominator of time signature.</param>
+            <param name="midiClocksPerClick">The number of MIDI clocks per metronome click.</param>
+            <param name="numberOfNotated32nds">The number of notated 32nd notes per MIDI quarter note.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.TimeSignatureMetaMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.TimeSignatureMetaMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.TimeSignatureMetaMidiEvent.Numerator">
+            <summary>Gets or sets the numerator for the event.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.TimeSignatureMetaMidiEvent.Denominator">
+            <summary>Gets or sets the denominator for the event.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.TimeSignatureMetaMidiEvent.MidiClocksPerClick">
+            <summary>Gets or sets the MIDI clocks per click for the event.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.TimeSignatureMetaMidiEvent.NumberOfNotated32nds">
+            <summary>Gets or sets the number of notated 32 notes per MIDI quarter note for the event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.TimeSignatureMetaMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Meta.UnknownMetaMidiEvent">
+            <summary>An unknown meta event message.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.UnknownMetaMidiEvent.#ctor(System.Int64,System.Byte,System.Byte[])">
+            <summary>Intializes the meta event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="metaEventID">The event ID for this meta event.</param>
+            <param name="data">The data associated with the event.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.UnknownMetaMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.UnknownMetaMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Meta.UnknownMetaMidiEvent.Data">
+            <summary>Gets or sets the data for the event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Meta.UnknownMetaMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.MidiEvent">
+            <summary>A MIDI event, serving as the base class for all types of MIDI events.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.MidiEvent.m_deltaTime">
+            <summary>The amount of time before this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.MidiEvent.#ctor(System.Int64)">
+            <summary>Initialize the event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+        </member>
+        <member name="M:MidiSharp.Events.MidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="M:MidiSharp.Events.MidiEvent.CombineBytesTo14Bits(System.Byte,System.Byte)">
+            <summary>Combines two 7-bit values into a single 14-bit value.</summary>
+            <param name="upper">The upper 7-bits.</param>
+            <param name="lower">The lower 7-bits.</param>
+            <returns>A 14-bit value stored in an integer.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.MidiEvent.Split14BitsToBytes(System.Int32,System.Byte@,System.Byte@)">
+            <summary>Splits a 14-bit value into two bytes each with 7 of the bits.</summary>
+            <param name="bits">The value to be split.</param>
+            <param name="upperBits">The upper 7 bits.</param>
+            <param name="lowerBits">The lower 7 bits.</param>
+        </member>
+        <member name="M:MidiSharp.Events.MidiEvent.WriteVariableLength(System.IO.Stream,System.Int64)">
+            <summary>Writes bytes for a long value in the special 7-bit form.</summary>
+            <param name="outputStream">The stream to which the length should be written.</param>
+            <param name="value">The value to be converted and written.</param>
+        </member>
+        <member name="M:MidiSharp.Events.MidiEvent.DataToString(System.Byte[])">
+            <summary>Converts an array of bytes into human-readable form.</summary>
+            <param name="data">The array to convert.</param>
+            <returns>The string containing the bytes.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.MidiEvent.GetNoteName(System.Byte)">
+            <summary>Gets the name of a note given its numeric value.</summary>
+            <param name="note">The numeric value of the note.</param>
+            <returns>The name of the note.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.MidiEvent.GetNoteValue(System.String)">
+            <summary>Gets the note value for a string representing the name of a note.</summary>
+            <param name="noteName">
+            The name of the note, such as "C#4" or "Eb0".
+            Valid names are in the range from "C0" (0) to "G10" (127).
+            </param>
+            <returns>The numeric value of the specified note.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.MidiEvent.GetNoteValue(MidiSharp.GeneralMidiPercussion)">
+            <summary>Gets the note value for the specific percussion.</summary>
+            <param name="percussion">The percussion for which we need the note value.</param>
+            <returns>The numeric value of the specified percussion.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.MidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="P:MidiSharp.Events.MidiEvent.DeltaTime">
+            <summary>Gets or sets the amount of time before this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.MidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.MidiEvent.DeepClone(System.Byte[])">
+            <summary>Makes a copy of a byte array.</summary>
+            <param name="data">The data to be copied.</param>
+            <returns>A new byte array containin the same values as the original.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.SystemExclusiveMidiEvent">
+            <summary>A system exclusive MIDI event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.SystemExclusiveMidiEvent.#ctor(System.Int64,System.Byte[])">
+            <summary>Intializes the meta MIDI event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="data">The data for the event.</param>
+        </member>
+        <member name="M:MidiSharp.Events.SystemExclusiveMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.SystemExclusiveMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.SystemExclusiveMidiEvent.Data">
+            <summary>Gets or sets the data for this event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.SystemExclusiveMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Voice.ChannelPressureVoiceMidiEvent">
+            <summary>MIDI event to apply pressure to a channel's currently playing notes.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.ChannelPressureVoiceMidiEvent.CategoryId">
+            <summary>The category status byte for ChannelPressure messages.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.ChannelPressureVoiceMidiEvent.m_pressure">
+            <summary>The amount of pressure to be applied (0x0 to 0x7F).</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.ChannelPressureVoiceMidiEvent.#ctor(System.Int64,System.Byte,System.Byte)">
+            <summary>Initialize the Controller MIDI event message.</summary>
+            <param name="deltaTime">The delta-time since the previous message.</param>
+            <param name="channel">The channel to which to write the message (0 through 15).</param>
+            <param name="pressure">The pressure to be applied.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.ChannelPressureVoiceMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.ChannelPressureVoiceMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.ChannelPressureVoiceMidiEvent.Pressure">
+            <summary>Gets or sets the amount pressure to be applied (0x0 to 0x7F).</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.ChannelPressureVoiceMidiEvent.Parameter1">
+            <summary>The first parameter as sent in the MIDI message.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.ChannelPressureVoiceMidiEvent.Parameter2">
+            <summary>The second parameter as sent in the MIDI message.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.ChannelPressureVoiceMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Voice.ControllerVoiceMidiEvent">
+            <summary>
+            MIDI event to modify the tone with data from a pedal, lever, or other device; 
+            also used for miscellaneous controls such as volume and bank select.
+            </summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.ControllerVoiceMidiEvent.CategoryId">
+            <summary>The category status byte for Controller messages.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.ControllerVoiceMidiEvent.m_number">
+            <summary>The type of controller message (0x0 to 0x7F).</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.ControllerVoiceMidiEvent.m_value">
+            <summary>The value of the controller message (0x0 to 0x7F).</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.ControllerVoiceMidiEvent.#ctor(System.Int64,System.Byte,MidiSharp.Controller,System.Byte)">
+            <summary>Initialize the Controller MIDI event message.</summary>
+            <param name="deltaTime">The delta-time since the previous message.</param>
+            <param name="channel">The channel to which to write the message (0 through 15).</param>
+            <param name="number">The type of controller message to be written.</param>
+            <param name="value">The value of the controller message.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.ControllerVoiceMidiEvent.#ctor(System.Int64,System.Byte,System.Byte,System.Byte)">
+            <summary>Initialize the Controller MIDI event message.</summary>
+            <param name="deltaTime">The delta-time since the previous message.</param>
+            <param name="channel">The channel to which to write the message (0 through 15).</param>
+            <param name="number">The type of controller message to be written.</param>
+            <param name="value">The value of the controller message.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.ControllerVoiceMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.ControllerVoiceMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.ControllerVoiceMidiEvent.Number">
+            <summary>Gets or sets type of controller message to be written (0x0 to 0x7F).</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.ControllerVoiceMidiEvent.Value">
+            <summary>Gets or sets the value of the controller message (0x0 to 0x7F).</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.ControllerVoiceMidiEvent.Parameter1">
+            <summary>The first parameter as sent in the MIDI message.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.ControllerVoiceMidiEvent.Parameter2">
+            <summary>The second parameter as sent in the MIDI message.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.ControllerVoiceMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Voice.Note.AftertouchNoteVoiceMidiEvent">
+            <summary>MIDI event to modify a note according to the aftertouch of a key.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.Note.AftertouchNoteVoiceMidiEvent.CategoryId">
+            <summary>The category status byte for Aftertouch messages.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.Note.AftertouchNoteVoiceMidiEvent.m_pressure">
+            <summary>The pressure of the note (0x0 to 0x7F).</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.AftertouchNoteVoiceMidiEvent.#ctor(System.Int64,System.Byte,System.String,System.Byte)">
+            <summary>Initialize the Aftertouch MIDI event message.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="channel">The channel (0x0 through 0xF) for this voice event.</param>
+            <param name="note">The name of the MIDI note to modify ("C0" to "G10").</param>
+            <param name="pressure">The velocity of the note (0x0 to 0x7F).</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.AftertouchNoteVoiceMidiEvent.#ctor(System.Int64,MidiSharp.GeneralMidiPercussion,System.Byte)">
+            <summary>Initialize the Aftertouch MIDI event message.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="percussion">The percussion instrument to modify.</param>
+            <param name="pressure">The pressure of the note (0x0 to 0x7F).</param>
+            <remarks>Channel 10 (internally 0x9) is assumed.</remarks>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.AftertouchNoteVoiceMidiEvent.#ctor(System.Int64,System.Byte,System.Byte,System.Byte)">
+            <summary>Initialize the Aftertouch MIDI event message.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="channel">The channel (0x0 through 0xF) for this voice event.</param>
+            <param name="note">The MIDI note to modify (0x0 to 0x7F).</param>
+            <param name="pressure">The pressure of the note (0x0 to 0x7F).</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.AftertouchNoteVoiceMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.AftertouchNoteVoiceMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.Note.AftertouchNoteVoiceMidiEvent.Pressure">
+            <summary>Gets or sets the pressure of the note (0x0 to 0x7F).</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.Note.AftertouchNoteVoiceMidiEvent.Parameter2">
+            <summary>The second parameter as sent in the MIDI message.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.AftertouchNoteVoiceMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Voice.Note.NoteVoiceMidiEvent">
+            <summary>Represents a voice category message that deals with notes.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.Note.NoteVoiceMidiEvent.m_note">
+            <summary>The MIDI note to modify (0x0 to 0x7F).</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.NoteVoiceMidiEvent.#ctor(System.Int64,System.Byte,System.Byte,System.Byte)">
+            <summary>Intializes the note voice MIDI event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="category">The category identifier (0x0 through 0xF) for this voice event.</param>
+            <param name="channel">The channel (0x0 through 0xF) for this voice event.</param>
+            <param name="note">The MIDI note to modify (0x0 to 0x7F).</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.NoteVoiceMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.NoteVoiceMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.Note.NoteVoiceMidiEvent.Note">
+            <summary>Gets or sets the MIDI note (0x0 to 0x7F).</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.Note.NoteVoiceMidiEvent.Parameter1">
+            <summary>The first parameter as sent in the MIDI message.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.NoteVoiceMidiEvent.Complete(System.Int64,System.Byte,System.String,System.Byte,System.Int64)">
+            <summary>Create a complete note (both on and off messages).</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="channel">The channel (0x0 through 0xF) for this voice event.</param>
+            <param name="note">The name of the MIDI note to sound ("C0" to "G10").</param>
+            <param name="velocity">The velocity of the note (0x0 to 0x7F).</param>
+            <param name="duration">The duration of the note.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.NoteVoiceMidiEvent.Complete(System.Int64,MidiSharp.GeneralMidiPercussion,System.Byte,System.Int64)">
+            <summary>Create a complete note (both on and off messages).</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="percussion">The percussion instrument to sound.</param>
+            <param name="velocity">The velocity of the note (0x0 to 0x7F).</param>
+            <param name="duration">The duration of the note.</param>
+            <remarks>Channel 10 (internally 0x9) is assumed.</remarks>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.NoteVoiceMidiEvent.Complete(System.Int64,System.Byte,System.Byte,System.Byte,System.Int64)">
+            <summary>Create a complete note (both on and off messages) with a specified duration.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="channel">The channel (0x0 through 0xF) for this voice event.</param>
+            <param name="note">The MIDI note to sound (0x0 to 0x7F).</param>
+            <param name="velocity">The velocity of the note (0x0 to 0x7F).</param>
+            <param name="duration">The duration of the note.</param>
+        </member>
+        <member name="T:MidiSharp.Events.Voice.Note.OffNoteVoiceMidiEvent">
+            <summary>Midi event to stop playing a note.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.Note.OffNoteVoiceMidiEvent.CategoryId">
+            <summary>The category status byte for NoteOff messages.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.Note.OffNoteVoiceMidiEvent.m_velocity">
+            <summary>The velocity of the note (0x0 to 0x7F).</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.OffNoteVoiceMidiEvent.#ctor(System.Int64,System.Byte,System.String,System.Byte)">
+            <summary>Initialize the NoteOff MIDI event message.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="channel">The channel (0x0 through 0xF) for this voice event.</param>
+            <param name="note">The name of the MIDI note to stop sounding ("C0" to "G10").</param>
+            <param name="velocity">The velocity of the note (0x0 to 0x7F).</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.OffNoteVoiceMidiEvent.#ctor(System.Int64,MidiSharp.GeneralMidiPercussion,System.Byte)">
+            <summary>Initialize the NoteOff MIDI event message.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="percussion">The percussion instrument to sound.</param>
+            <param name="velocity">The velocity of the note (0x0 to 0x7F).</param>
+            <remarks>Channel 10 (internally 0x9) is assumed.</remarks>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.OffNoteVoiceMidiEvent.#ctor(System.Int64,System.Byte,System.Byte,System.Byte)">
+            <summary>Initialize the NoteOff MIDI event message.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="channel">The channel (0x0 through 0xF) for this voice event.</param>
+            <param name="note">The MIDI note to stop sounding (0x0 to 0x7F).</param>
+            <param name="velocity">The velocity of the note (0x0 to 0x7F).</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.OffNoteVoiceMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.OffNoteVoiceMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.Note.OffNoteVoiceMidiEvent.Velocity">
+            <summary>Gets or sets the velocity of the note (0x0 to 0x7F).</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.Note.OffNoteVoiceMidiEvent.Parameter2">
+            <summary>The second parameter as sent in the MIDI message.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.OffNoteVoiceMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Voice.Note.OnNoteVoiceMidiEvent">
+            <summary>Midi event to start playing a note.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.Note.OnNoteVoiceMidiEvent.CategoryId">
+            <summary>The category status byte for NoteOn messages.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.Note.OnNoteVoiceMidiEvent.m_velocity">
+            <summary>The velocity of the note (0x0 to 0x7F).</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.OnNoteVoiceMidiEvent.#ctor(System.Int64,System.Byte,System.String,System.Byte)">
+            <summary>Initialize the NoteOn MIDI event message.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="channel">The channel (0x0 through 0xF) for this voice event.</param>
+            <param name="note">The name of the MIDI note to sound ("C0" to "G10").</param>
+            <param name="velocity">The velocity of the note (0x0 to 0x7F).</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.OnNoteVoiceMidiEvent.#ctor(System.Int64,MidiSharp.GeneralMidiPercussion,System.Byte)">
+            <summary>Initialize the NoteOn MIDI event message.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="percussion">The percussion instrument to sound.</param>
+            <param name="velocity">The velocity of the note (0x0 to 0x7F).</param>
+            <remarks>Channel 10 (internally 0x9) is assumed.</remarks>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.OnNoteVoiceMidiEvent.#ctor(System.Int64,System.Byte,System.Byte,System.Byte)">
+            <summary>Initialize the NoteOn MIDI event message.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="channel">The channel (0x0 through 0xF) for this voice event.</param>
+            <param name="note">The MIDI note to sound (0x0 to 0x7F).</param>
+            <param name="velocity">The velocity of the note (0x0 to 0x7F).</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.OnNoteVoiceMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.OnNoteVoiceMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.Note.OnNoteVoiceMidiEvent.Velocity">
+            <summary>Gets or sets the velocity of the note (0x0 to 0x7F).</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.Note.OnNoteVoiceMidiEvent.Parameter2">
+            <summary>The second parameter as sent in the MIDI message.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.Note.OnNoteVoiceMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Voice.PitchWheelVoiceMidiEvent">
+            <summary>MIDI event to modify the pitch of all notes played on the channel.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.PitchWheelVoiceMidiEvent.CategoryId">
+            <summary>The category status byte for PitchWheel messages.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.PitchWheelVoiceMidiEvent.m_upperBits">
+            <summary>The upper 7-bits of the wheel position..</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.PitchWheelVoiceMidiEvent.m_lowerBits">
+            <summary>The lower 7-bits of the wheel position..</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.PitchWheelVoiceMidiEvent.#ctor(System.Int64,System.Byte,MidiSharp.PitchWheelStep)">
+            <summary>Initialize the Controller MIDI event message.</summary>
+            <param name="deltaTime">The delta-time since the previous message.</param>
+            <param name="channel">The channel to which to write the message (0 through 15).</param>
+            <param name="steps">The amount of pitch change to apply.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.PitchWheelVoiceMidiEvent.#ctor(System.Int64,System.Byte,System.Byte,System.Byte)">
+            <summary>Initialize the Controller MIDI event message.</summary>
+            <param name="deltaTime">The delta-time since the previous message.</param>
+            <param name="channel">The channel to which to write the message (0 through 15).</param>
+            <param name="upperBits">The upper 7 bits of the position.</param>
+            <param name="lowerBits">The lower 7 bits of the position.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.PitchWheelVoiceMidiEvent.#ctor(System.Int64,System.Byte,System.Int32)">
+            <summary>Initialize the Controller MIDI event message.</summary>
+            <param name="deltaTime">The delta-time since the previous message.</param>
+            <param name="channel">The channel to which to write the message (0 through 15).</param>
+            <param name="position">The position of the wheel.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.PitchWheelVoiceMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.PitchWheelVoiceMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.PitchWheelVoiceMidiEvent.UpperBits">
+            <summary>Gets or sets the upper 7 bits of the position.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.PitchWheelVoiceMidiEvent.LowerBits">
+            <summary>Gets or sets the lower 7 bits of the position.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.PitchWheelVoiceMidiEvent.Position">
+            <summary>Gets or sets the wheel position.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.PitchWheelVoiceMidiEvent.Parameter1">
+            <summary>The first parameter as sent in the MIDI message.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.PitchWheelVoiceMidiEvent.Parameter2">
+            <summary>The second parameter as sent in the MIDI message.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.PitchWheelVoiceMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Voice.ProgramChangeVoiceMidiEvent">
+            <summary>MIDI event to select an instrument for the channel by assigning a patch number.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.ProgramChangeVoiceMidiEvent.CategoryId">
+            <summary>The category status byte for ProgramChange messages.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.ProgramChangeVoiceMidiEvent.m_number">
+            <summary>The number of the program to which to change (0x0 to 0x7F).</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.ProgramChangeVoiceMidiEvent.#ctor(System.Int64,System.Byte,MidiSharp.GeneralMidiInstrument)">
+            <summary>Initialize the ProgramChange MIDI event message.</summary>
+            <param name="deltaTime">The delta-time since the previous message.</param>
+            <param name="channel">The channel to which to write the message (0 through 15).</param>
+            <param name="number">The instrument to which to change.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.ProgramChangeVoiceMidiEvent.#ctor(System.Int64,System.Byte,System.Byte)">
+            <summary>Initialize the ProgramChange MIDI event message.</summary>
+            <param name="deltaTime">The delta-time since the previous message.</param>
+            <param name="channel">The channel to which to write the message (0 through 15).</param>
+            <param name="number">The number of the program to which to change.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.ProgramChangeVoiceMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.ProgramChangeVoiceMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.ProgramChangeVoiceMidiEvent.Number">
+            <summary>Gets or sets the number of the program to which to change (0x0 to 0x7F).</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.ProgramChangeVoiceMidiEvent.Parameter1">
+            <summary>The first parameter as sent in the MIDI message.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.ProgramChangeVoiceMidiEvent.Parameter2">
+            <summary>The second parameter as sent in the MIDI message.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.ProgramChangeVoiceMidiEvent.DeepClone">
+            <summary>Creates a deep copy of the MIDI event.</summary>
+            <returns>A deep clone of the MIDI event.</returns>
+        </member>
+        <member name="T:MidiSharp.Events.Voice.VoiceMidiEvent">
+            <summary>Represents a voice category message.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.VoiceMidiEvent.m_category">
+            <summary>The status identifier (0x0 through 0xF) for this voice event.</summary>
+        </member>
+        <member name="F:MidiSharp.Events.Voice.VoiceMidiEvent.m_channel">
+            <summary>The channel (0x0 through 0xF) for this voice event.</summary>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.VoiceMidiEvent.#ctor(System.Int64,System.Byte,System.Byte)">
+            <summary>Intializes the voice MIDI event.</summary>
+            <param name="deltaTime">The amount of time before this event.</param>
+            <param name="category">The category identifier (0x0 through 0xF) for this voice event.</param>
+            <param name="channel">The channel (0x0 through 0xF) for this voice event.</param>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.VoiceMidiEvent.ToString">
+            <summary>Generate a string representation of the event.</summary>
+            <returns>A string representation of the event.</returns>
+        </member>
+        <member name="M:MidiSharp.Events.Voice.VoiceMidiEvent.Write(System.IO.Stream)">
+            <summary>Write the event to the output stream.</summary>
+            <param name="outputStream">The stream to which the event should be written.</param>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.VoiceMidiEvent.Category">
+            <summary>Gets the status identifier (0x0 through 0xF) for this voice event.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.VoiceMidiEvent.Channel">
+            <summary>Gets or sets the channel (0x0 through 0xF) for this voice event.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.VoiceMidiEvent.Status">
+            <summary>Gets the status byte for the event message (combination of category and channel).</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.VoiceMidiEvent.Message">
+            <summary>Gets the Dword that represents this event as a MIDI event message.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.VoiceMidiEvent.Parameter1">
+            <summary>The first parameter as sent in the MIDI message.</summary>
+        </member>
+        <member name="P:MidiSharp.Events.Voice.VoiceMidiEvent.Parameter2">
+            <summary>The second parameter as sent in the MIDI message.</summary>
+        </member>
+        <member name="T:MidiSharp.Format">
+            <summary>MIDI sequence format.</summary>
+        </member>
+        <member name="F:MidiSharp.Format.Zero">
+            <summary>
+            Format 0 as described in the MIDI specification.  The sequence should contain only one track
+            with all of the events for the whole song.
+            </summary>
+        </member>
+        <member name="F:MidiSharp.Format.One">
+            <summary>
+            Format 1 as described in the MIDI specification.  The sequence should contain at least two
+            tracks, with song information such as song title and tempo in the first track and with subsequent
+            tracks containing the music data relevant to the track.
+            </summary>
+        </member>
+        <member name="F:MidiSharp.Format.Two">
+            <summary>
+            Format 2 as described in the MIDI specification.  The sequence contains multiple tracks
+            which may not be played together.
+            </summary>
+        </member>
+        <member name="T:MidiSharp.GeneralMidiInstrument">
+            <summary>General MIDI Instrument Patch Map.</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.AcousticGrand">
+            <summary>Acoustic Grand</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.BrightAcoustic">
+            <summary>Bright Acoustic</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.ElectricGrand">
+            <summary>Electric Grand</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.HonkyTonk">
+            <summary>Honky Tonk</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.ElectricPiano1">
+            <summary>Electric Piano 1</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.ElectricPiano2">
+            <summary>Electric Piano 2</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Harpsichord">
+            <summary>Harpsichord</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Clav">
+            <summary>Clav</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Celesta">
+            <summary>Celesta</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Glockenspiel">
+            <summary>Glockenspiel</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.MusicBox">
+            <summary>Music Box</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Vibraphone">
+            <summary>Vibraphone</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Marimba">
+            <summary>Marimba</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Xylophone">
+            <summary>Xylophone</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.TubularBells">
+            <summary>Tubular Bells</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Dulcimer">
+            <summary>Dulcimer</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.DrawbarOrgan">
+            <summary>Drawbar Organ</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.PercussiveOrgan">
+            <summary>Percussive Organ</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.RockOrgan">
+            <summary>Rock Organ</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.ChurchOrgan">
+            <summary>Church Organ</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.ReedOrgan">
+            <summary>Reed Organ</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Accoridan">
+            <summary>Accoridan</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Harmonica">
+            <summary>Harmonica</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.TangoAccordian">
+            <summary>Tango Accordian</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.NylonAcousticGuitar">
+            <summary>Nylon Acoustic Guitar</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SteelAcousticGuitar">
+            <summary>Steel Acoustic Guitar</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.JazzElectricGuitar">
+            <summary>Jazz Electric Guitar</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.CleanElectricGuitar">
+            <summary>Clean Electric Guitar</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.MutedElectricGuitar">
+            <summary>Muted Electric Guitar</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.OverdrivenGuitar">
+            <summary>Overdriven Guitar</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.DistortionGuitar">
+            <summary>Distortion Guitar</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.GuitarHarmonics">
+            <summary>Guitar Harmonics</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.AcousticBass">
+            <summary>Acoustic Bass</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.FingerElectricBass">
+            <summary>Finger Electric Bass</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.PickElectricBass">
+            <summary>Pick Electric Bass</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.FretlessBass">
+            <summary>Fretless Bass</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SlapBass1">
+            <summary>Slap Bass 1</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SlapBass2">
+            <summary>Slap Bass 2</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SynthBass1">
+            <summary>Synth Bass 1</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SynthBass2">
+            <summary>Synth Bass 2</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Violin">
+            <summary>Violin</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Viola">
+            <summary>Viola</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Cello">
+            <summary>Cello</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Contrabass">
+            <summary>Contrabass</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.TremoloStrings">
+            <summary>Tremolo Strings</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.PizzicatoStrings">
+            <summary>Pizzicato Strings</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.OrchestralStrings">
+            <summary>Orchestral Strings</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Timpani">
+            <summary>Timpani</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.StringEnsemble1">
+            <summary>String Ensemble 1</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.StringEnsemble2">
+            <summary>String Ensemble 2</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SynthStrings1">
+            <summary>Synth Strings 1</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SynthStrings2">
+            <summary>Synth Strings 2</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.ChoirAahs">
+            <summary>Choir Aahs</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.VoiceOohs">
+            <summary>Voice Oohs</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SynthVoice">
+            <summary>Synth Voice</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.OrchestraHit">
+            <summary>Orchestra Hit</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Trumpet">
+            <summary>Trumpet</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Trombone">
+            <summary>Trombone</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Tuba">
+            <summary>Tuba</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.MutedTrumpet">
+            <summary>Muted Trumpet</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.FrenchHorn">
+            <summary>French Horn</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.BrassSection">
+            <summary>Brass Section</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SynthBrass1">
+            <summary>Synth Brass 1</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SynthBrass2">
+            <summary>Synth Brass 2</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SopranoSax">
+            <summary>Soprano Sax</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.AltoSax">
+            <summary>Alto Sax</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.TenorSax">
+            <summary>Tenor Sax</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.BaritoneSax">
+            <summary>Baritone Sax</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Oboe">
+            <summary>Oboe</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.EnglishHorn">
+            <summary>English Horn</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Bassoon">
+            <summary>Bassoon</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Clarinet">
+            <summary>Clarinet</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Piccolo">
+            <summary>Piccolo</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Flute">
+            <summary>Flute</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Recorder">
+            <summary>Recorder</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.PanFlute">
+            <summary>Pan Flute</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.BlownBottle">
+            <summary>Blown Bottle</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Skakuhachi">
+            <summary>Skakuhachi</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Whistle">
+            <summary>Whistle</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Ocarina">
+            <summary>Ocarina</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SquareLead">
+            <summary>Square Lead</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SawtoothLead">
+            <summary>Sawtooth Lead</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.CalliopeLead">
+            <summary>Calliope Lead</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.ChiffLead">
+            <summary>Chiff Lead</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.CharangLead">
+            <summary>Charang Lead</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.VoiceLead">
+            <summary>Voice Lead</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.FifthsLead">
+            <summary>Fifths Lead</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.BaseLead">
+            <summary>Base Lead</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.NewAgePad">
+            <summary>NewAge Pad</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.WarmPad">
+            <summary>Warm Pad</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.PolysynthPad">
+            <summary>Polysynth Pad</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.ChoirPad">
+            <summary>Choir Pad</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.BowedPad">
+            <summary>Bowed Pad</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.MetallicPad">
+            <summary>Metallic Pad</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.HaloPad">
+            <summary>Halo Pad</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SweepPad">
+            <summary>Sweep Pad</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Rain">
+            <summary>Rain</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Soundtrack">
+            <summary>Soundtrack</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Crystal">
+            <summary>Crystal</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Atmosphere">
+            <summary>Atmosphere</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Brightness">
+            <summary>Brightness</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Goblin">
+            <summary>Goblin</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Echos">
+            <summary>Echos</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SciFi">
+            <summary>SciFi</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Sitar">
+            <summary>Sitar</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Banjo">
+            <summary>Banjo</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Shamisen">
+            <summary>Shamisen</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Koto">
+            <summary>Koto</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Kalimba">
+            <summary>Kalimba</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Bagpipe">
+            <summary>Bagpipe</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Fiddle">
+            <summary>Fiddle</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Shanai">
+            <summary>Shanai</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.TinkleBell">
+            <summary>Tinkle Bell</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Agogo">
+            <summary>Agogo</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SteelDrums">
+            <summary>Steel Drums</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Woodblock">
+            <summary>Woodblock</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.TaikoDrum">
+            <summary>TaikoD rum</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.MelodicTom">
+            <summary>Melodic Tom</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.SynthDrum">
+            <summary>Synth Drum</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.ReverseCymbal">
+            <summary>Reverse Cymbal</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.GuitarFretNoise">
+            <summary>Guitar Fret Noise</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.BreathNoise">
+            <summary>Breath Noise</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Seashore">
+            <summary>Seashore</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.BirdTweet">
+            <summary>Bird Tweet</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.TelephoneRing">
+            <summary>Telephone Ring</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Helicopter">
+            <summary>Helicopter</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Applause">
+            <summary>Applause</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiInstrument.Gunshot">
+            <summary>Gunshot</summary>
+        </member>
+        <member name="T:MidiSharp.GeneralMidiPercussion">
+            <summary>General MIDI Percussion Patch Map.</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.BassDrum">
+            <summary>Bass Drum</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.BassDrum1">
+            <summary>Bass Drum 1</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.SideStick">
+            <summary>Side Stick</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.AcousticSnare">
+            <summary>Acoustic Snare</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.HandClap">
+            <summary>Hand Clap</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.ElectricSnare">
+            <summary>Electric Snare</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.LowFloorTom">
+            <summary>Low Floor Tom</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.ClosedHiHat">
+            <summary>Closed Hi Hat</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.HighFloorTom">
+            <summary>High Floor Tom</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.PedalHiHat">
+            <summary>Pedal Hi Hat</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.LowTom">
+            <summary>Low Tom</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.OpenHiHat">
+            <summary>Open Hi Hat</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.LowMidTom">
+            <summary>Low Mid Tom</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.HiMidTom">
+            <summary>Hi Mid Tom</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.CrashCymbal1">
+            <summary>Crash Cymbal 1</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.HighTom">
+            <summary>High Tom</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.RideCymbal">
+            <summary>Ride Cymbal</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.ChineseCymbal">
+            <summary>Chinese Cymbal</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.RideBell">
+            <summary>Ride Bell</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.Tambourine">
+            <summary>Tambourine</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.SplashCymbal">
+            <summary>Splash Cymbal</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.Cowbell">
+            <summary>Cowbell</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.CrashCymbal2">
+            <summary>Crash Cymbal 2</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.Vibraslap">
+            <summary>Vibraslap</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.RideCymbal2">
+            <summary>Ride Cymbal 2</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.HiBongo">
+            <summary>Hi Bongo</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.LowBongo">
+            <summary>Low Bongo</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.MuteHiConga">
+            <summary>Mute Hi Conga</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.OpenHiConga">
+            <summary>Open Hi Conga</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.LowConga">
+            <summary>Low Conga</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.HighTimbale">
+            <summary>High Timbale</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.LowTimbale">
+            <summary>Low Timbale</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.HighAgogo">
+            <summary>High Agogo</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.LowAgogo">
+            <summary>Low Agogo</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.Cabasa">
+            <summary>Cabasa</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.Maracas">
+            <summary>Maracas</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.ShortWhistle">
+            <summary>Short Whistle</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.LongWhistle">
+            <summary>Long Whistle</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.ShortGuiro">
+            <summary>Short Guiro</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.LongGuiro">
+            <summary>Long Guiro</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.Claves">
+            <summary>Claves</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.HiWoodBlock">
+            <summary>Hi Wood Block</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.LowWoodBlock">
+            <summary>Low Wood Block</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.MuteCuica">
+            <summary>Mute Cuica</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.OpenCuica">
+            <summary>Open Cuica</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.MuteTriangle">
+            <summary>Mute Triangle</summary>
+        </member>
+        <member name="F:MidiSharp.GeneralMidiPercussion.OpenTriangle">
+            <summary>Open Triangle</summary>
+        </member>
+        <member name="T:MidiSharp.Headers.ChunkHeader">
+            <summary>Chunk header to store base MIDI chunk information.</summary>
+        </member>
+        <member name="F:MidiSharp.Headers.ChunkHeader.m_id">
+            <summary>The id representing this chunk header.</summary>
+        </member>
+        <member name="F:MidiSharp.Headers.ChunkHeader.m_length">
+            <summary>The amount of data following the header.</summary>
+        </member>
+        <member name="M:MidiSharp.Headers.ChunkHeader.#ctor(System.Byte[],System.Int64)">
+            <summary>Initialize the ChunkHeader.</summary>
+            <param name="id">The 4-byte header identifier.</param>
+            <param name="length">The amount of data to be stored under this header.</param>
+        </member>
+        <member name="P:MidiSharp.Headers.ChunkHeader.ID">
+            <summary>Gets the id representing this chunk header.</summary>
+        </member>
+        <member name="P:MidiSharp.Headers.ChunkHeader.Length">
+            <summary>Gets the amount of data following the header.</summary>
+        </member>
+        <member name="M:MidiSharp.Headers.ChunkHeader.Write(System.IO.Stream)">
+            <summary>Writes the chunk header out to the stream.</summary>
+            <param name="outputStream">The stream to which the header should be written.</param>
+        </member>
+        <member name="M:MidiSharp.Headers.ChunkHeader.Read(System.IO.Stream)">
+            <summary>Reads a chunk header from the input stream.</summary>
+            <param name="inputStream">The stream from which to read.</param>
+            <returns>The chunk header read from the stream.</returns>
+        </member>
+        <member name="T:MidiSharp.Headers.MThdChunkHeader">
+            <summary>"MThd" header for writing out MIDI files.</summary>
+        </member>
+        <member name="F:MidiSharp.Headers.MThdChunkHeader.s_mThdID">
+            <summary>The id for an MThd header.</summary>
+        </member>
+        <member name="F:MidiSharp.Headers.MThdChunkHeader.MThdHeaderLength">
+            <summary>Expected length of the MThdHeader. 2 bytes for each of the format, num tracks, and division.</summary>
+        </member>
+        <member name="F:MidiSharp.Headers.MThdChunkHeader.m_header">
+            <summary>Additional chunk header data.</summary>
+        </member>
+        <member name="F:MidiSharp.Headers.MThdChunkHeader.m_format">
+            <summary>The format for the MIDI file (0, 1, or 2).</summary>
+        </member>
+        <member name="F:MidiSharp.Headers.MThdChunkHeader.m_numTracks">
+            <summary>The number of tracks in the MIDI sequence.</summary>
+        </member>
+        <member name="F:MidiSharp.Headers.MThdChunkHeader.m_division">
+            <summary>Specifies the meaning of the delta-times</summary>
+        </member>
+        <member name="M:MidiSharp.Headers.MThdChunkHeader.#ctor(MidiSharp.Format,System.Int32,System.Int32)">
+            <summary>Initialize the MThd chunk header.</summary>
+            <param name="format">
+            The format for the MIDI file (0, 1, or 2).
+            0 - a single multi-channel track
+            1 - one or more simultaneous tracks
+            2 - one or more sequentially independent single-track patterns
+            </param>
+            <param name="numTracks">The number of tracks in the MIDI file.</param>
+            <param name="division">
+            The meaning of the delta-times in the file.
+            If the number is zero or positive, then bits 14 thru 0 represent the number of delta-time 
+            ticks which make up a quarter-note. If number is negative, then bits 14 through 0 represent
+            subdivisions of a second, in a way consistent with SMPTE and MIDI time code.
+            </param>
+        </member>
+        <member name="P:MidiSharp.Headers.MThdChunkHeader.Format">
+            <summary>Gets the format for the MIDI file (0, 1, or 2).</summary>
+        </member>
+        <member name="P:MidiSharp.Headers.MThdChunkHeader.NumberOfTracks">
+            <summary>Gets the number of tracks in the MIDI sequence.</summary>
+        </member>
+        <member name="P:MidiSharp.Headers.MThdChunkHeader.Division">
+            <summary>Gets the meaning of the delta-times</summary>
+        </member>
+        <member name="M:MidiSharp.Headers.MThdChunkHeader.ValidateHeader(MidiSharp.Headers.ChunkHeader)">
+            <summary>Validates that a header is correct as an MThd header.</summary>
+            <param name="header">The header to be validated.</param>
+        </member>
+        <member name="M:MidiSharp.Headers.MThdChunkHeader.Write(System.IO.Stream)">
+            <summary>Writes the MThd header out to the stream.</summary>
+            <param name="outputStream">The stream to which the header should be written.</param>
+        </member>
+        <member name="M:MidiSharp.Headers.MThdChunkHeader.Read(System.IO.Stream)">
+            <summary>Read in an MThd chunk from the stream.</summary>
+            <param name="inputStream">The stream from which to read the MThd chunk.</param>
+            <returns>The MThd chunk read.</returns>
+        </member>
+        <member name="T:MidiSharp.Headers.MTrkChunkHeader">
+            <summary>"MTrk" header for writing out tracks.</summary>
+            <remarks>"MTrkChunkHeader" is a bit of a misnomer as it includes all of the data for the track, as well, in byte form.</remarks>
+        </member>
+        <member name="F:MidiSharp.Headers.MTrkChunkHeader.MTrkID">
+            <summary>The MTrk header id.</summary>
+        </member>
+        <member name="F:MidiSharp.Headers.MTrkChunkHeader.m_header">
+            <summary>Additional chunk header data.</summary>
+        </member>
+        <member name="F:MidiSharp.Headers.MTrkChunkHeader.m_data">
+            <summary>Data for which this is a header.</summary>
+        </member>
+        <member name="M:MidiSharp.Headers.MTrkChunkHeader.#ctor(System.Byte[])">
+            <summary>Initialize the MTrk chunk header.</summary>
+            <param name="data">The track data for which this is a header.</param>
+        </member>
+        <member name="P:MidiSharp.Headers.MTrkChunkHeader.Data">
+            <summary>Gets the data for which this is a header.</summary>
+        </member>
+        <member name="M:MidiSharp.Headers.MTrkChunkHeader.ValidateHeader(MidiSharp.Headers.ChunkHeader)">
+            <summary>Validates that a header is correct as an MThd header.</summary>
+            <param name="header">The header to be validated.</param>
+        </member>
+        <member name="M:MidiSharp.Headers.MTrkChunkHeader.Write(System.IO.Stream)">
+            <summary>Writes the track header out to the stream.</summary>
+            <param name="outputStream">The stream to which the header should be written.</param>
+        </member>
+        <member name="M:MidiSharp.Headers.MTrkChunkHeader.Read(System.IO.Stream)">
+            <summary>Read in an MTrk chunk from the stream.</summary>
+            <param name="inputStream">The stream from which to read the MTrk chunk.</param>
+            <returns>The MTrk chunk read.</returns>
+        </member>
+        <member name="T:MidiSharp.Key">
+            <summary>The number of sharps or flats in the key signature.</summary>
+        </member>
+        <member name="F:MidiSharp.Key.Flat7">
+            <summary>Key has 7 flats.</summary>
+        </member>
+        <member name="F:MidiSharp.Key.Flat6">
+            <summary>Key has 6 flats.</summary>
+        </member>
+        <member name="F:MidiSharp.Key.Flat5">
+            <summary>Key has 5 flats.</summary>
+        </member>
+        <member name="F:MidiSharp.Key.Flat4">
+            <summary>Key has 4 flats.</summary>
+        </member>
+        <member name="F:MidiSharp.Key.Flat3">
+            <summary>Key has 3 flats.</summary>
+        </member>
+        <member name="F:MidiSharp.Key.Flat2">
+            <summary>Key has 2 flats.</summary>
+        </member>
+        <member name="F:MidiSharp.Key.Flat1">
+            <summary>Key has 1 flat.</summary>
+        </member>
+        <member name="F:MidiSharp.Key.NoFlatsOrSharps">
+            <summary>Key has no sharps or flats.</summary>
+        </member>
+        <member name="F:MidiSharp.Key.Sharp1">
+            <summary>Key has 1 sharp.</summary>
+        </member>
+        <member name="F:MidiSharp.Key.Sharp2">
+            <summary>Key has 2 sharps.</summary>
+        </member>
+        <member name="F:MidiSharp.Key.Sharp3">
+            <summary>Key has 3 sharps.</summary>
+        </member>
+        <member name="F:MidiSharp.Key.Sharp4">
+            <summary>Key has 4 sharps.</summary>
+        </member>
+        <member name="F:MidiSharp.Key.Sharp5">
+            <summary>Key has 5 sharps.</summary>
+        </member>
+        <member name="F:MidiSharp.Key.Sharp6">
+            <summary>Key has 6 sharps.</summary>
+        </member>
+        <member name="F:MidiSharp.Key.Sharp7">
+            <summary>Key has 7 sharps.</summary>
+        </member>
+        <member name="T:MidiSharp.ManufacturerId">
+            <summary>IDs of MIDI-related manufacturers.</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.SequentialCircuits">
+            <summary>Sequential Circuits</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.BigBriar">
+            <summary>Big Briar</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Octave">
+            <summary>Octave</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Moog">
+            <summary>Moog</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.PassportDesigns">
+            <summary>Passport Designs</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Lexicon">
+            <summary>Lexicon</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Kurzweil">
+            <summary>Kurzweil</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Fender">
+            <summary>Fender</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Gulbransen">
+            <summary>Gulbransen</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.DeltaLabs">
+            <summary>DeltaLabs</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.SoundComp">
+            <summary>SoundComp</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.GeneralElectro">
+            <summary>General Electro</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Techmar">
+            <summary>Techmar</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.MatthewsResearch">
+            <summary>Matthews Research</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Oberheim">
+            <summary>Oberheim</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.PAIA">
+            <summary>PAIA</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Simmons">
+            <summary>Simmons</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.DigiDesign">
+            <summary>DigiDesign</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Fairlight">
+            <summary>Fairlight</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Peavey">
+            <summary>Peavey</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.JLCooper">
+            <summary>J.L. Cooper</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Lowery">
+            <summary>Lowery</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Lin">
+            <summary>Lin</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Emu">
+            <summary>Emu</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.BonTempi">
+            <summary>Bon Tempi</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.SIEL">
+            <summary>SIEL</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.SyntheAxe">
+            <summary>Synthe Axe</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Hohner">
+            <summary>Hohner</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Crumar">
+            <summary>Crumar</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Solton">
+            <summary>Solton</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.JellinghausMs">
+            <summary>Jellinghaus Ms</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.CTS">
+            <summary>CTS</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.PPG">
+            <summary>PPG</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Elka">
+            <summary>Elka</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Cheetah">
+            <summary>Cheetah</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Waldorf">
+            <summary>Waldorf</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Kawai">
+            <summary>Kawai</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Roland">
+            <summary>Roland</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Korg">
+            <summary>Korg</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Yamaha">
+            <summary>Yamaha</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Casio">
+            <summary>Casio</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.Akai">
+            <summary>Akai</summary>
+        </member>
+        <member name="F:MidiSharp.ManufacturerId.EducationalUse">
+            <summary>This ID is for educational or development use only.</summary>
+        </member>
+        <member name="T:MidiSharp.MidiEventCollection">
+            <summary>Provides a collection of MidiEvents.</summary>
+        </member>
+        <member name="M:MidiSharp.MidiEventCollection.#ctor">
+            <summary>Initializes the collection.</summary>
+        </member>
+        <member name="M:MidiSharp.MidiEventCollection.AddRange(System.Collections.Generic.IEnumerable{MidiSharp.Events.MidiEvent})">
+            <summary>Adds a collection of events to this collection.</summary>
+            <param name="events">The events to add.</param>
+        </member>
+        <member name="M:MidiSharp.MidiEventCollection.Sort(System.Comparison{MidiSharp.Events.MidiEvent})">
+            <summary>Sorts the events in the collection.</summary>
+            <param name="comparison">The comparison operation to use for sorting.</param>
+        </member>
+        <member name="M:MidiSharp.MidiEventCollection.ConvertDeltasToTotals">
+            <summary>Converts the delta times on all events to from delta times to total times.</summary>
+        </member>
+        <member name="M:MidiSharp.MidiEventCollection.ConvertTotalsToDeltas">
+            <summary>Converts the delta times on all events from total times back to delta times.</summary>
+        </member>
+        <member name="T:MidiSharp.MidiParser">
+            <summary>MIDI track parser.</summary>
+        </member>
+        <member name="M:MidiSharp.MidiParser.ParseToTrack(System.Byte[])">
+            <summary>Parses a byte array into a track's worth of events.</summary>
+            <param name="data">The data to be parsed.</param>
+            <returns>The track containing the parsed events.</returns>
+        </member>
+        <member name="M:MidiSharp.MidiParser.ParseMetaEvent(System.Int64,System.Byte,System.Byte[],System.Int64@)">
+            <summary>Parse a meta MIDI event from the data stream.</summary>
+            <param name="deltaTime">The previously parsed delta-time for this event.</param>
+            <param name="eventType">The previously parsed type of message we're expecting to find.</param>
+            <param name="data">The data stream from which to read the event information.</param>
+            <param name="pos">The position of the start of the event information.</param>
+            <returns>The parsed meta MIDI event.</returns>
+        </member>
+        <member name="M:MidiSharp.MidiParser.ParseVoiceEvent(System.Int64,System.Byte,System.Byte,System.Byte[],System.Int64@)">
+            <summary>Parse a voice event from the data stream.</summary>
+            <param name="deltaTime">The previously parsed delta-time for this event.</param>
+            <param name="messageType">The previously parsed type of message we're expecting to find.</param>
+            <param name="channel">The previously parsed channel for this message.</param>
+            <param name="data">The data stream from which to read the event information.</param>
+            <param name="pos">The position of the start of the event information.</param>
+            <returns>The parsed voice MIDI event.</returns>
+        </member>
+        <member name="M:MidiSharp.MidiParser.ReadASCIIText(System.Byte[],System.Int64@)">
+            <summary>Reads an ASCII text sequence from the data stream.</summary>
+            <param name="data">The data stream from which to read the text.</param>
+            <param name="pos">The position of the start of the sequence.</param>
+            <returns>The text as a string.</returns>
+        </member>
+        <member name="M:MidiSharp.MidiParser.ReadVariableLength(System.Byte[],System.Int64@)">
+            <summary>Reads a variable-length value from the data stream.</summary>
+            <param name="data">The data to process.</param>
+            <param name="pos">The position at which to start processing.</param>
+            <returns>The value read; pos is updated to reflect the new position.</returns>
+        </member>
+        <member name="T:MidiSharp.MidiParser.MidiParserException">
+            <summary>Exception thrown when an error is encountered during the parsing of a MIDI file.</summary>
+        </member>
+        <member name="F:MidiSharp.MidiParser.MidiParserException.m_position">
+            <summary>Position in the data stream that caused the exception.</summary>
+        </member>
+        <member name="M:MidiSharp.MidiParser.MidiParserException.#ctor(System.String,System.Int64)">
+            <summary>Initialize the exception.</summary>
+            <param name="message">The message for the exception.</param>
+            <param name="position">Position in the data stream that caused the exception.</param>
+        </member>
+        <member name="M:MidiSharp.MidiParser.MidiParserException.#ctor(System.String,System.Exception,System.Int64)">
+            <summary>Initialize the exception.</summary>
+            <param name="message">The message for the exception.</param>
+            <param name="innerException">The exception that caused this exception.</param>
+            <param name="position">Position in the data stream that caused the exception.</param>
+        </member>
+        <member name="P:MidiSharp.MidiParser.MidiParserException.Position">
+            <summary>Gets or sets the byte position that caused the exception.</summary>
+        </member>
+        <member name="T:MidiSharp.MidiSequence">
+            <summary>Represents a MIDI sequence containing tracks of MIDI data.</summary>
+        </member>
+        <member name="F:MidiSharp.MidiSequence.m_format">
+            <summary>The format of the MIDI file (0, 1, or 2).</summary>
+        </member>
+        <member name="F:MidiSharp.MidiSequence.m_division">
+            <summary>The meaning of delta-times.</summary>
+        </member>
+        <member name="F:MidiSharp.MidiSequence.m_tracks">
+            <summary>The tracks in the MIDI sequence.</summary>
+        </member>
+        <member name="M:MidiSharp.MidiSequence.#ctor">
+            <summary>Initialize the MIDI sequence with default values for format and division.</summary>
+        </member>
+        <member name="M:MidiSharp.MidiSequence.#ctor(MidiSharp.Format,System.Int32)">
+            <summary>Initialize the MIDI sequence.</summary>
+            <param name="format">
+            The format for the MIDI file (0, 1, or 2).
+            0 - a single multi-channel track
+            1 - one or more simultaneous tracks
+            2 - one or more sequentially independent single-track patterns
+            </param>
+            <param name="division">The meaning of the delta-times in the file.</param>
+        </member>
+        <member name="M:MidiSharp.MidiSequence.#ctor(MidiSharp.MidiSequence)">
+            <summary>Initialize the MIDI sequence with a copy of the data from another sequence.</summary>
+            <param name="source">The source sequence from which to copy.</param>
+        </member>
+        <member name="P:MidiSharp.MidiSequence.Format">
+            <summary>Gets the format of the sequence.</summary>
+        </member>
+        <member name="P:MidiSharp.MidiSequence.Division">
+            <summary>
+            Gets or sets the division for the sequence. This is the time division used to
+            decode the track event delta times into "real" time, and it represents either ticks 
+            per beat or frames per second.
+            </summary>
+        </member>
+        <member name="P:MidiSharp.MidiSequence.DivisionType">
+            <summary>Gets the division type of the sequence.</summary>
+        </member>
+        <member name="P:MidiSharp.MidiSequence.TicksPerBeatOrFrame">
+            <summary>
+            Gets the ticks per beat or frame of the division. Ticks per beat translate to the 
+            number of clock ticks or track delta positions in every quarter note of music or
+            in every frame.
+            </summary>
+        </member>
+        <member name="P:MidiSharp.MidiSequence.FramesPerSecond">
+            <summary>Gets the number of SMPTE frames per second.</summary>
+        </member>
+        <member name="P:MidiSharp.MidiSequence.Tracks">
+            <summary>Gets the collection of tracks in this sequence.</summary>
+        </member>
+        <member name="M:MidiSharp.MidiSequence.System#Collections#IEnumerable#GetEnumerator">
+            <summary>Gets an enumerator for the tracks in the sequence.</summary>
+            <returns>An enumerator for the tracks in the sequence.</returns>
+        </member>
+        <member name="M:MidiSharp.MidiSequence.GetEnumerator">
+            <summary>Gets an enumerator for the tracks in the sequence.</summary>
+            <returns>An enumerator for the tracks in the sequence.</returns>
+        </member>
+        <member name="M:MidiSharp.MidiSequence.ToString">
+            <summary>Writes the sequence to a string in human-readable form.</summary>
+            <returns>A human-readable representation of the tracks and events in the sequence.</returns>
+        </member>
+        <member name="M:MidiSharp.MidiSequence.ToString(System.IO.TextWriter)">
+            <summary>Dumps the MIDI sequence to the writer in human-readable form.</summary>
+            <param name="writer">The writer to which the sequence should be written.</param>
+        </member>
+        <member name="M:MidiSharp.MidiSequence.Save(System.IO.Stream)">
+            <summary>Writes the MIDI sequence to the output stream.</summary>
+            <param name="outputStream">The stream to which the MIDI sequence should be written.</param>
+        </member>
+        <member name="M:MidiSharp.MidiSequence.WriteHeader(System.IO.Stream,System.Int32)">
+            <summary>Writes a MIDI file header out to the stream.</summary>
+            <param name="outputStream">The output stream to which the header should be written.</param>
+            <param name="numTracks">The number of tracks that will be a part of this sequence.</param>
+            <remarks>This functionality is automatically performed during a Save.</remarks>
+        </member>
+        <member name="M:MidiSharp.MidiSequence.Open(System.IO.Stream)">
+            <summary>Reads a MIDI stream into a new MidiSequence.</summary>
+            <param name="inputStream">The stream containing the MIDI data.</param>
+            <returns>A MidiSequence containing the parsed MIDI data.</returns>
+        </member>
+        <member name="T:MidiSharp.MidiSequenceExtensions">
+            <summary>Common manipulations of MidiSequences.</summary>
+        </member>
+        <member name="M:MidiSharp.MidiSequenceExtensions.Transpose(MidiSharp.MidiSequence,System.Int32)">
+            <summary>Transposes a MIDI sequence up/down the specified number of half-steps.</summary>
+            <param name="sequence">The sequence to be transposed.</param>
+            <param name="steps">The number of steps up(+) or down(-) to transpose the sequence.</param>
+        </member>
+        <member name="M:MidiSharp.MidiSequenceExtensions.Transpose(MidiSharp.MidiSequence,System.Int32,System.Boolean)">
+            <summary>Transposes a MIDI sequence up/down the specified number of half-steps.</summary>
+            <param name="sequence">The sequence to be transposed.</param>
+            <param name="steps">The number of steps up(+) or down(-) to transpose the sequence.</param>
+            <param name="includeDrums">Whether drum tracks should also be transposed.</param>
+            <remarks>If the step value is too large or too small, notes may wrap.</remarks>
+        </member>
+        <member name="M:MidiSharp.MidiSequenceExtensions.Trim(MidiSharp.MidiSequence,System.Int64)">
+            <summary>Trims a MIDI file to a specified length.</summary>
+            <param name="sequence">The sequence to be copied and trimmed.</param>
+            <param name="totalTime">The requested time length of the new MIDI sequence.</param>
+            <returns>A MIDI sequence with only those events that fell before the requested time limit.</returns>
+        </member>
+        <member name="M:MidiSharp.MidiSequenceExtensions.Convert(MidiSharp.MidiSequence,MidiSharp.Format)">
+            <summary>Converts a MIDI sequence from its current format to the specified format.</summary>
+            <param name="sequence">The sequence to be converted.</param>
+            <param name="format">The format to which we want to convert the sequence.</param>
+            <returns>The converted sequence.</returns>
+            <remarks>
+            This may or may not return the same sequence as passed in.
+            Regardless, the reference passed in should not be used after this call as the old
+            sequence could be unusable if a different reference was returned.
+            </remarks>
+        </member>
+        <member name="M:MidiSharp.MidiSequenceExtensions.Convert(MidiSharp.MidiSequence,MidiSharp.Format,MidiSharp.MidiSequenceExtensions.FormatConversionOption)">
+            <summary>Converts the MIDI sequence into a new one with the desired format.</summary>
+            <param name="sequence">The sequence to be converted.</param>
+            <param name="format">The format to which we want to convert the sequence.</param>
+            <param name="options">Options used when doing the conversion.</param>
+            <returns>The new, converted sequence.</returns>
+        </member>
+        <member name="T:MidiSharp.MidiSequenceExtensions.FormatConversionOption">
+            <summary>Options used when performing a format conversion.</summary>
+        </member>
+        <member name="F:MidiSharp.MidiSequenceExtensions.FormatConversionOption.None">
+            <summary>No special formatting.</summary>
+        </member>
+        <member name="F:MidiSharp.MidiSequenceExtensions.FormatConversionOption.CopyTrackToChannel">
+            <summary>
+            Uses the number of the track as the channel for all events on that track.
+            Only valid if the number of the track is a valid track number.
+            </summary>
+        </member>
+        <member name="M:MidiSharp.MidiSequenceExtensions.HasLyrics(MidiSharp.MidiSequence)">
+            <summary>Gets whether the sequence contains any lyric events.</summary>
+            <param name="sequence">The sequence to examine.</param>
+            <returns>true if the sequence contains any lyric events; otherwise, false.</returns>
+        </member>
+        <member name="T:MidiSharp.MidiTrack">
+            <summary>Represents a single MIDI track in a MIDI file.</summary>
+        </member>
+        <member name="F:MidiSharp.MidiTrack.m_events">
+            <summary>Collection of MIDI event added to this track.</summary>
+        </member>
+        <member name="F:MidiSharp.MidiTrack.m_requireEndOfTrack">
+            <summary>Whether the track can be written without an end of track marker.</summary>
+        </member>
+        <member name="M:MidiSharp.MidiTrack.#ctor">
+            <summary>Initialize the track.</summary>
+        </member>
+        <member name="M:MidiSharp.MidiTrack.#ctor(MidiSharp.MidiTrack)">
+            <summary>Initializes the track with a copy of the data in another track.</summary>
+            <returns>The track to copy.</returns>
+        </member>
+        <member name="P:MidiSharp.MidiTrack.HasEndOfTrack">
+            <summary>Gets whether an end of track event has been added.</summary>
+        </member>
+        <member name="P:MidiSharp.MidiTrack.RequireEndOfTrack">
+            <summary>Gets or sets whether an end of track marker is required for writing out the entire track.</summary>
+            <remarks>
+            MIDI files require an end of track marker at the end of every track.  
+            Setting this to false could have negative consequences.
+            </remarks>
+        </member>
+        <member name="P:MidiSharp.MidiTrack.Events">
+            <summary>Gets the collection of MIDI events that are a part of this track.</summary>
+        </member>
+        <member name="M:MidiSharp.MidiTrack.System#Collections#IEnumerable#GetEnumerator">
+            <summary>Gets an enumerator for the tracks in the sequence.</summary>
+            <returns>An enumerator for the tracks in the sequence.</returns>
+        </member>
+        <member name="M:MidiSharp.MidiTrack.GetEnumerator">
+            <summary>Gets an enumerator for the tracks in the sequence.</summary>
+            <returns>An enumerator for the tracks in the sequence.</returns>
+        </member>
+        <member name="M:MidiSharp.MidiTrack.Write(System.IO.Stream)">
+            <summary>Write the track to the output stream.</summary>
+            <param name="outputStream">The output stream to which the track should be written.</param>
+        </member>
+        <member name="M:MidiSharp.MidiTrack.ToString">
+            <summary>Writes the track to a string in human-readable form.</summary>
+            <returns>A human-readable representation of the events in the track.</returns>
+        </member>
+        <member name="M:MidiSharp.MidiTrack.ToString(System.IO.TextWriter)">
+            <summary>Dumps the MIDI track to the writer in human-readable form.</summary>
+            <param name="writer">The writer to which the track should be written.</param>
+        </member>
+        <member name="P:MidiSharp.MidiTrack.TrackName">
+            <summary>Gets the name of the track, based on finding the first track name event in the track, if one exists.</summary>
+        </member>
+        <member name="T:MidiSharp.PitchWheelStep">
+            <summary>Half and whole value steps for the pitch wheel.</summary>
+        </member>
+        <member name="F:MidiSharp.PitchWheelStep.WholeStepDown">
+            <summary>A complete whole step down.</summary>
+        </member>
+        <member name="F:MidiSharp.PitchWheelStep.ThreeQuarterStepDown">
+            <summary>3/4 steps down.</summary>
+        </member>
+        <member name="F:MidiSharp.PitchWheelStep.HalfStepDown">
+            <summary>1/2 step down.</summary>
+        </member>
+        <member name="F:MidiSharp.PitchWheelStep.QuarterStepDown">
+            <summary>1/4 step down.</summary>
+        </member>
+        <member name="F:MidiSharp.PitchWheelStep.NoStep">
+            <summary>No movement.</summary>
+        </member>
+        <member name="F:MidiSharp.PitchWheelStep.QuarterStepUp">
+            <summary>1/4 step up.</summary>
+        </member>
+        <member name="F:MidiSharp.PitchWheelStep.HalfStepUp">
+            <summary>1/2 step up.</summary>
+        </member>
+        <member name="F:MidiSharp.PitchWheelStep.ThreeQuarterStepUp">
+            <summary>3/4 steps up.</summary>
+        </member>
+        <member name="F:MidiSharp.PitchWheelStep.WholeStepUp">
+            <summary>A complete whole step up.</summary>
+        </member>
+        <member name="T:MidiSharp.SpecialChannel">
+            <summary>Defines channels reserved for special purposes.</summary>
+        </member>
+        <member name="F:MidiSharp.SpecialChannel.Percussion">
+            <summary>General MIDI percussion channel</summary>
+        </member>
+        <member name="T:MidiSharp.Tonality">
+            <summary>The tonality of the key signature (major or minor).</summary>
+        </member>
+        <member name="F:MidiSharp.Tonality.Major">
+            <summary>Key is major.</summary>
+        </member>
+        <member name="F:MidiSharp.Tonality.Minor">
+            <summary>Key is minor.</summary>
+        </member>
+        <member name="T:MidiSharp.MidiTrackCollection">
+            <summary>Provides a validated collection of MidiTracks.</summary>
+        </member>
+        <member name="F:MidiSharp.MidiTrackCollection.m_owningSequence">
+            <summary>The sequence with which this collection is associated.</summary>
+        </member>
+        <member name="M:MidiSharp.MidiTrackCollection.#ctor(MidiSharp.MidiSequence)">
+            <summary>Initializes the collection.</summary>
+            <param name="sequence">The sequence with which this collection is associated.</param>
+        </member>
+        <member name="M:MidiSharp.MidiTrackCollection.AddNewTrack">
+            <summary>Adds a new track to the track collection.</summary>
+            <returns>The newly added track.</returns>
+        </member>
+        <member name="M:MidiSharp.MidiTrackCollection.AddRange(System.Collections.Generic.IEnumerable{MidiSharp.MidiTrack})">
+            <summary>Adds a collection of tracks to this collection.</summary>
+            <param name="tracks">The tracks to add.</param>
+        </member>
+        <member name="M:MidiSharp.MidiTrackCollection.InsertItem(System.Int32,MidiSharp.MidiTrack)">
+            <summary>Inserts an element into the collection at the specified index.</summary>
+            <param name="index">The index at which to insert the element..</param>
+            <param name="item">The item to insert.</param>
+        </member>
+    </members>
+</doc>

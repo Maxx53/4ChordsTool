@@ -11,12 +11,19 @@ namespace _4ChordsTool
     public partial class MainForm : Form
     {
         const string cmdParam = "-quit -batchmode -projectPath {0} -executeMethod ExportAssetBundles.ExportResource";
+        const string destPath = @"\FourChords_Data\StreamingAssets\AssetBundles\";
+
         static string projectPath = Application.StartupPath + @"\BuildAssetBundle\";
         static string assetsPath = projectPath + "Assets";
         static string resultPath = assetsPath + @"\Result\";
 
-        private Properties.Settings settings = Properties.Settings.Default;
-        public BackgroundWorker waitingThread = new BackgroundWorker();
+        //Hotfix 11/07/17 
+        //Importing custom songs through starter pack replace
+        static string packToReplace = "countrystarterpack";
+        static string md4PackName = string.Empty;
+
+        public static Properties.Settings settings = Properties.Settings.Default;
+        public static BackgroundWorker waitingThread = new BackgroundWorker();
 
 
         public MainForm()
@@ -25,15 +32,29 @@ namespace _4ChordsTool
             this.Icon = Properties.Resources.tool;
         }
 
-        private void MainForm_Load(object sender, EventArgs e)
+        public static void InitWorker(RunWorkerCompletedEventHandler WorkerCompleted)
         {
+            waitingThread = new BackgroundWorker();
             waitingThread.WorkerSupportsCancellation = true;
             waitingThread.DoWork += waitingThread_DoWork;
-            waitingThread.RunWorkerCompleted += waitingThread_RunWorkerCompleted;
+            waitingThread.RunWorkerCompleted += WorkerCompleted;
+        }
+
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+            InitWorker(waitingThread_RunWorkerCompleted);
 
             gamePathTextBox.Text = settings.gamePath;
             unityPathTextBox.Text = settings.unityPath;
             sPathTextBox.Text = settings.lastPath;
+            packToReplace = settings.packToReplace;
+            md4PackName = Utils.ComputeMD4(packToReplace);
+
+
+
+            SongEditForm frm = new SongEditForm();
+            frm.ShowDialog();
+
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -50,6 +71,7 @@ namespace _4ChordsTool
             if (folderBrowserDialog1.ShowDialog() == DialogResult.OK)
             {
                 sPathTextBox.Text = folderBrowserDialog1.SelectedPath;
+                settings.lastPath = sPathTextBox.Text;
             }
         }
 
@@ -59,7 +81,7 @@ namespace _4ChordsTool
             {
 
                 unityPathTextBox.Text = openFileDialog1.FileName;
-
+                settings.unityPath = unityPathTextBox.Text;
             }
         }
 
@@ -68,11 +90,12 @@ namespace _4ChordsTool
             if (folderBrowserDialog1.ShowDialog() == DialogResult.OK)
             {
                 gamePathTextBox.Text = folderBrowserDialog1.SelectedPath;
+                settings.gamePath = gamePathTextBox.Text;
             }
 
         }
 
-        private static bool MakeSongPack(string packName, string filesPath)
+        public static bool MakeSongPack(string packName, string filesPath)
         {
             var songPack = new SongPack()
             {
@@ -96,8 +119,8 @@ namespace _4ChordsTool
                 {
                     using (var content = File.OpenText(file))
                     {
-                        var serializer = new XmlSerializer(typeof(SongContainer));
-                        var data = (SongContainer)serializer.Deserialize(content);
+                        var serializer = new XmlSerializer(typeof(SongXML));
+                        var data = (SongXML)serializer.Deserialize(content);
 
                         songPack.MetaData.songs.Add(new SongPack.SongInfo()
                         {
@@ -110,7 +133,7 @@ namespace _4ChordsTool
                     }
 
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     continue;
                 }
@@ -132,17 +155,15 @@ namespace _4ChordsTool
                     serializer.Serialize(sw, songPack, ns);
                 }
 
-                File.WriteAllText(filesPath + @"\identifier.txt", "507290");
-
                 //Success
                 return true;
             }
         }
 
 
-        private void buildDlcButton_Click(object sender, EventArgs e)
+        private void buildPackButton_Click(object sender, EventArgs e)
         {
-            SetStatus(1, "Building DLC...");
+            SetStatus(1, "Building Song Pack...");
 
             if (File.Exists(unityPathTextBox.Text))
             {
@@ -150,9 +171,8 @@ namespace _4ChordsTool
                 {
                     if (waitingThread.IsBusy != true)
                     {
-                        //Passing paths from textboxes
-                        var paths = new Tuple<string, string>(unityPathTextBox.Text, gamePathTextBox.Text);
-                        waitingThread.RunWorkerAsync(paths);
+                        InitWorker(waitingThread_RunWorkerCompleted);
+                        waitingThread.RunWorkerAsync(settings.lastPath);
                     }
                 }
                 else
@@ -163,9 +183,9 @@ namespace _4ChordsTool
             }
             else
             {
-                if (MessageBox.Show("Unity not found, can't build DLC automatically!" + Environment.NewLine +
+                if (MessageBox.Show("Unity not found, can't build Song Pack automatically!" + Environment.NewLine +
                       "Make SongPack only?" + Environment.NewLine +
-                      "Note: after making SongPack, you must build an asset bundle (DLC) throught Unity manually.", "Warning!", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                      "Note: after making SongPack, you must build an asset bundle throught Unity manually.", "Warning!", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
                 {
                     if (MakeSongPack(spNameTextBox.Text, sPathTextBox.Text))
                         MessageBox.Show("SongPack generated successfully and placed to your songs path.", "Success!", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -178,33 +198,34 @@ namespace _4ChordsTool
             }
         }
 
-        private void waitingThread_DoWork(object sender, DoWorkEventArgs e)
+        private static void waitingThread_DoWork(object sender, DoWorkEventArgs e)
         {
             //Setting paths
-            var paths = (e.Argument as Tuple<string, string>);
-            var unityPath = paths.Item1;
-            var gamePath = paths.Item2;
+            var unityPath = settings.unityPath;
+            var gamePath = settings.gamePath;
 
 
             //Clean before copying
             Utils.RemoveFiles(assetsPath);
             Utils.RemoveFiles(resultPath);
 
-            Utils.CopyFiles(sPathTextBox.Text, assetsPath);
+            //Copy song files from input path to assets
+            Utils.CopyFiles(e.Argument.ToString(), assetsPath);
 
             //Leave dlc name to Unity script
-            var name = Utils.NamingDLC(spNameTextBox.Text);
-            File.WriteAllText(resultPath + "DLCname.txt", name);
+
+            File.WriteAllText(resultPath + "PackName.txt", md4PackName);
 
             //Run Unity in batch mode
             Utils.StartCmdLine(unityPath, string.Format(cmdParam, projectPath), true);
 
-            var dlcFile = resultPath + name;
+            var dlcFile = resultPath + md4PackName;
 
             if (File.Exists(dlcFile))
             {
                 //Copy result DLC to game path
-                var destFileResult = gamePath + @"\DLC\" + name;
+                var destFileResult = gamePath + destPath + packToReplace;
+
                 File.Copy(dlcFile, destFileResult, true);
                 File.SetAttributes(destFileResult, FileAttributes.Normal);
 
@@ -245,6 +266,17 @@ namespace _4ChordsTool
             statusLabel.Text = text;
         }
 
+
+
+
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+
+            SongEditForm frm = new SongEditForm();
+            frm.ShowDialog();
+  
+        }
     }
 
 }

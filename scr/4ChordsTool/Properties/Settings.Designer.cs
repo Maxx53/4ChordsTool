@@ -14,7 +14,7 @@ namespace _4ChordsTool.Properties
 
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "11.0.0.0")]
-    internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase
+    public sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase
     {
 
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
@@ -72,6 +72,22 @@ namespace _4ChordsTool.Properties
             set
             {
                 this["lastPath"] = value;
+            }
+        }
+
+        [global::System.Configuration.SettingsProviderAttribute(typeof(PortableSettingsProvider))]
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("countrystarterpack")]
+        public string packToReplace
+        {
+            get
+            {
+                return ((string)(this["packToReplace"]));
+            }
+            set
+            {
+                this["packToReplace"] = value;
             }
         }
     }

@@ -27,7 +27,7 @@ public class ExportAssetBundles
             }
         }
 
-        TextAsset nameStr = (TextAsset)Resources.LoadAssetAtPath(resPath + "DLCname.txt", typeof(TextAsset));
+        TextAsset nameStr = (TextAsset)Resources.LoadAssetAtPath(resPath + "PackName.txt", typeof(TextAsset));
         string dlcName = nameStr.text;
 
         string bundlePath = resPath + dlcName;

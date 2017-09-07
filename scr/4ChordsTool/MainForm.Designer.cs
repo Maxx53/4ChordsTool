@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.buildDlcButton = new System.Windows.Forms.Button();
+            this.buildPackButton = new System.Windows.Forms.Button();
             this.spNameTextBox = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.sPathTextBox = new System.Windows.Forms.TextBox();
@@ -46,23 +46,24 @@
             this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.button1 = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.SuspendLayout();
             // 
-            // buildDlcButton
+            // buildPackButton
             // 
-            this.buildDlcButton.Image = global::_4ChordsTool.Properties.Resources.start;
-            this.buildDlcButton.Location = new System.Drawing.Point(324, 47);
-            this.buildDlcButton.Name = "buildDlcButton";
-            this.buildDlcButton.Size = new System.Drawing.Size(122, 27);
-            this.buildDlcButton.TabIndex = 1;
-            this.buildDlcButton.Text = "Build DLC";
-            this.buildDlcButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.buildDlcButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
-            this.buildDlcButton.UseVisualStyleBackColor = true;
-            this.buildDlcButton.Click += new System.EventHandler(this.buildDlcButton_Click);
+            this.buildPackButton.Image = global::_4ChordsTool.Properties.Resources.start;
+            this.buildPackButton.Location = new System.Drawing.Point(324, 47);
+            this.buildPackButton.Name = "buildPackButton";
+            this.buildPackButton.Size = new System.Drawing.Size(122, 27);
+            this.buildPackButton.TabIndex = 1;
+            this.buildPackButton.Text = "Build Pack";
+            this.buildPackButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.buildPackButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
+            this.buildPackButton.UseVisualStyleBackColor = true;
+            this.buildPackButton.Click += new System.EventHandler(this.buildPackButton_Click);
             // 
             // spNameTextBox
             // 
@@ -70,16 +71,16 @@
             this.spNameTextBox.Name = "spNameTextBox";
             this.spNameTextBox.Size = new System.Drawing.Size(244, 20);
             this.spNameTextBox.TabIndex = 2;
-            this.spNameTextBox.Text = "My Custom DLC";
+            this.spNameTextBox.Text = "My Custom Song Pack";
             // 
             // label1
             // 
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(12, 54);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(59, 13);
+            this.label1.Size = new System.Drawing.Size(63, 13);
             this.label1.TabIndex = 3;
-            this.label1.Text = "DLC Name";
+            this.label1.Text = "Pack Name";
             // 
             // sPathTextBox
             // 
@@ -178,7 +179,7 @@
             // 
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.statusLabel});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 195);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 226);
             this.statusStrip1.Name = "statusStrip1";
             this.statusStrip1.Size = new System.Drawing.Size(479, 22);
             this.statusStrip1.SizingGrip = false;
@@ -199,7 +200,7 @@
             // 
             // groupBox2
             // 
-            this.groupBox2.Controls.Add(this.buildDlcButton);
+            this.groupBox2.Controls.Add(this.buildPackButton);
             this.groupBox2.Controls.Add(this.spNameTextBox);
             this.groupBox2.Controls.Add(this.label1);
             this.groupBox2.Controls.Add(this.browseSongsPath);
@@ -210,13 +211,24 @@
             this.groupBox2.Size = new System.Drawing.Size(455, 85);
             this.groupBox2.TabIndex = 9;
             this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Custom DLC";
+            this.groupBox2.Text = "Custom Song Pack";
+            // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(336, 191);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(122, 27);
+            this.button1.TabIndex = 5;
+            this.button1.Text = "Song Editor";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(479, 217);
+            this.ClientSize = new System.Drawing.Size(479, 248);
+            this.Controls.Add(this.button1);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.statusStrip1);
             this.Controls.Add(this.groupBox1);
@@ -239,7 +251,7 @@
         }
 
         #endregion
-        private System.Windows.Forms.Button buildDlcButton;
+        private System.Windows.Forms.Button buildPackButton;
         private System.Windows.Forms.TextBox spNameTextBox;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.TextBox sPathTextBox;
@@ -257,6 +269,7 @@
         private System.Windows.Forms.ToolStripStatusLabel statusLabel;
         private System.Windows.Forms.OpenFileDialog openFileDialog1;
         private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.Button button1;
     }
 }
 
